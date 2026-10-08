@@ -27,6 +27,17 @@ from pathlib import Path
 
 PRACTICE_VIDEO = "video_1"
 
+# TrackEval chạy trong process con nên phải vá np.float / np.int ngay trong process đó,
+# rồi mới chạy script của TrackEval với sys.argv giữ nguyên.
+_TRACKEVAL_BOOTSTRAP = (
+    "import runpy, sys\n"
+    "import numpy as np\n"
+    "if not hasattr(np, 'float'): np.float = float\n"
+    "if not hasattr(np, 'int'): np.int = int\n"
+    "sys.argv = sys.argv[1:]\n"
+    "runpy.run_path(sys.argv[0], run_name='__main__')\n"
+)
+
 
 def _patch_numpy_aliases() -> None:
     """TrackEval còn gọi np.float / np.int (đã bỏ từ NumPy 1.24)."""
@@ -105,6 +116,8 @@ def run_trackeval(trackeval_root: Path, run_name: str, benchmark: str, split: st
     """
     cmd = [
         sys.executable,
+        "-c",
+        _TRACKEVAL_BOOTSTRAP,
         str(trackeval_root / "scripts" / "run_mot_challenge.py"),
         "--GT_FOLDER", str(trackeval_root / "data" / "gt" / "mot_challenge"),
         "--TRACKERS_FOLDER", str(trackeval_root / "data" / "trackers" / "mot_challenge"),
